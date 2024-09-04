@@ -5,8 +5,8 @@ import boto3
 import ast
 
 # Configuração da API OpenAI e WhatsApp
-api_key_gpt = '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'
-api_key_wpp = 'EABtZAae75lBYBO3KzCkfg8bcPZAffLWuog4oS6rJHMtGW4Y4ZC8pZAvM3gwqIYuGj1DXGA9TxjaYrr2P1ijZBtMRsmll3HLWozxlSJtZCa95qB2mVBgW2J0l4e6DW2SWFQRHO9uOKbZAn2ZArZBX1MjAdr4YlEu2aHAZArB2Y1n4j6k0XHiK4O8FYlOzEkxaYXau3pmGWD0L6Vdr4jhZCzr5NizEAZDZD'
+api_key_gpt = 'GPT KEY'
+api_key_wpp = 'WHATSAPP KEY'
 
 dynamodb = boto3.resource('dynamodb')
 table_context = dynamodb.Table('context')

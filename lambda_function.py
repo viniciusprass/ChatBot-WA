@@ -13,7 +13,7 @@ table_context = dynamodb.Table('context')
 table_appointments = dynamodb.Table('appointments')
 
 def sendMessage(message, number):
-    url = "https://graph.facebook.com/v20.0/418875104636202/messages"
+    url = "https://graph.facebook.com/v20.0/id/messages"
     
     headers = {
         'Authorization': f'Bearer {api_key_wpp}',

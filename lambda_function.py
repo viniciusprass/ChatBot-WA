@@ -3,17 +3,18 @@ import requests
 from datetime import datetime
 import boto3
 import ast
+import random
 
 # Configuração da API OpenAI e WhatsApp
-api_key_gpt = 'GPT KEY'
-api_key_wpp = 'WHATSAPP KEY'
+api_key_gpt = 'x'
+api_key_wpp = 'y'
 
 dynamodb = boto3.resource('dynamodb')
 table_context = dynamodb.Table('context')
 table_appointments = dynamodb.Table('appointments')
 
 def sendMessage(message, number):
-    url = "https://graph.facebook.com/v20.0/id/messages"
+    url = "https://graph.facebook.com/v20.0/z/messages"
     
     headers = {
         'Authorization': f'Bearer {api_key_wpp}',
@@ -29,6 +30,8 @@ def sendMessage(message, number):
     }
 
     response = requests.post(url, headers=headers, json=payload)
+    # print(response.status_code)
+    # print(response.text)
     return response
 
 def assistMessage(messages):
@@ -64,7 +67,7 @@ def lambda_handler(event, context):
     
     if http_method == 'GET':
         query_params = event.get('queryStringParameters', {})
-        if query_params.get('hub.mode') == 'subscribe' and query_params.get('hub.verify_token') == 'verify-code':
+        if query_params.get('hub.mode') == 'subscribe' and query_params.get('hub.verify_token') == 'a':
             return {
                 'statusCode': 200,
                 'body': query_params.get('hub.challenge', '')
@@ -88,7 +91,14 @@ def lambda_handler(event, context):
                     if user_message:
                         context_data = table_context.get_item(Key={'id': sender})
                         conversation_history = context_data.get('Item', {}).get('conversation_history', [])
-    
+                        
+                        responseTable = table_appointments.scan()
+                        items = responseTable.get('Items', [])
+                        codes = [item['id'] for item in items]
+                        print(codes)
+                        busySchedules = [item['data'] for item in items]
+                        print(busySchedules)
+                        
                         conversation_history.append({"role": "user", "content": user_message})
                         
                         assistantName = 'Assistente Inteligente WA'
@@ -96,15 +106,90 @@ def lambda_handler(event, context):
                         mensagens = [
                             {
                                 "role": "system",
-                                "content": f"Este é o histórico das conversas anteriores: {conversation_history}. Você irá atender os clientes da WA Mobile Oil Change. Apresente-se como {assistantName}. A empresa consiste em uma van que vai até o cliente, sem custos de deslocamento para ele. Os serviços oferecidos são: troca de óleo, troca de filtro de ar, troca de filtro de óleo, troca de fluido de arrefecimento, troca de pastilhas de freio, troca de limpadores de para-brisa e troca de bateria. Na troca de óleo, o cliente ganha gratuitamente: troca do fluido de arrefecimento e troca do líquido do limpador de para-brisa, junto com a revisão dos limpadores, revisão dos pneus, revisão da bateria e revisão das pastilhas de freio. Os agendamentos são feitos de segunda a sábado, 24 horas por dia, no fuso horário da Flórida. Os valores da troca de óleo são calculados por QTZ e têm duas variações de valores, uma para carros de uso doméstico e outra para frotas. Os valores da troca de óleo para uso doméstico são os seguintes: 5QTZ = USD75, 6QTZ = USD80, 7QTZ = USD85, 8QTZ = USD93, DIESEL 13QTZ = USD138. Para frotas, os valores da troca de óleo são: 5QTZ = USD60, 6QTZ = USD68, 7QTZ = USD75, 8QTZ = USD83, DIESEL 13QTZ = USD128. Os valores dos serviços adicionais não diferem entre uso doméstico e frotas, sendo: Filtro de ar = USD20, bateria = USD60, troca de limpadores de para-brisa = USD10, troca de pneu furado = USD30, rotação de pneus = USD40, troca de pastilhas de freio (dianteira ou traseira) = USD70, troca de pastilhas de freio (dianteira e traseira) = USD140. Para realizar o agendamento, você precisa perguntar ao cliente: nome, endereço onde o serviço será realizado (peça rua, bairro e cidade, se o endereço fornecido for fora de Orlando, informe que não atendemos lá, só aceite bairros válidos), modelo do carro em que o serviço será feito, dia e hora do agendamento, e se o serviço será para carro de uso doméstico ou para frotas (TODAS as informações são obrigatórias). Com base no modelo do carro, o assistente deve automaticamente calcular e informar o valor da troca de óleo, conforme os valores de QTZ especificados acima. Considere que hoje é o dia: {today}. Atendemos apenas nos bairros de Orlando, Flórida. Quando o cliente fornecer o modelo do carro, o assistente deve verificar quantos QTZ são necessários e responder com o valor correspondente. A WA trabalha com óleo totalmente sintético. Após coletar as informações, informe ao cliente as informações coletadas, o valor do serviço e peça para ele digitar 'ok', para confirmar as informações. Não responda nada além de dúvidas sobre serviços mecânicos e sobre nossa empresa"
+                                "content": f"""Você é o assistente virtual da WA Mobile Oil Change. Seu nome é {assistantName}. Sua função é auxiliar os clientes em agendar serviços de manutenção automotiva que a WA oferece, bem como responder a dúvidas sobre esses serviços.
+                                
+                                Este é o histórico das mensagens anteriores: {conversation_history}
+
+                                A empresa opera a partir de uma van que vai até o local do cliente, sem custos adicionais de deslocamento. Os serviços oferecidos incluem: troca de óleo, troca de filtro de ar, troca de filtro de óleo, troca de fluido de arrefecimento, troca de pastilhas de freio, troca de limpadores de para-brisa e troca de bateria. 
+                                
+                                Na troca de óleo, o cliente ganha gratuitamente a troca do fluido de arrefecimento, a troca do líquido do limpador de para-brisa, além da revisão dos limpadores, pneus, bateria e pastilhas de freio. 
+                                
+                                Os agendamentos podem ser feitos de segunda a sábado, 24 horas por dia, no fuso horário da Flórida. 
+                                
+                                ### Valores de Troca de Óleo:
+                                - **Uso Doméstico**:
+                                  - 5QTZ = USD75
+                                  - 6QTZ = USD80
+                                  - 7QTZ = USD85
+                                  - 8QTZ = USD93
+                                  - DIESEL 13QTZ = USD138
+                                - **Frotas**:
+                                  - 5QTZ = USD60
+                                  - 6QTZ = USD68
+                                  - 7QTZ = USD75
+                                  - 8QTZ = USD83
+                                  - DIESEL 13QTZ = USD128
+                                
+                                ### Valores dos Serviços Adicionais (Válidos para todos os clientes):
+                                - Filtro de ar = USD20
+                                - Bateria = USD60
+                                - Troca de limpadores de para-brisa = USD10
+                                - Troca de pneu furado = USD30
+                                - Rotação de pneus = USD40
+                                - Troca de pastilhas de freio (dianteira ou traseira) = USD70
+                                - Troca de pastilhas de freio (dianteira e traseira) = USD140
+                                
+                                ### Procedimento de Agendamento:
+                                    Pergunte ao cliente (Não mande um bloco inteiro com todas as perguntas, questione apenas uma delas):
+                                        - Nome completo
+                                        - Endereço completo (rua, bairro e cidade; se for fora de Orlando, informe que não atendemos fora da área)
+                                        - Modelo do carro em que o serviço será realizado
+                                        - Data desejada para a visita (Esta é a lista dos horários indisponíveis: {busySchedules})
+                                        - Questione se o serviço é doméstico ou para frotas de forma objetiva
+                                        - Todas essas informações são obrigatórias.
+                                   
+                                    Calcule automaticamente o valor da troca de óleo com base no modelo do carro e informe o valor estimado ao cliente.
+                                
+                                    Após coletar as informações, confirme os detalhes do agendamento e o valor total com o cliente. Peça ao cliente para digitar 'confirmar' (em português) ou 'confirm' (em inglês) para finalizar o agendamento.
+                                
+                                ### Procedimento de Cancelamento:
+                                - Se o cliente desejar excluir um agendamento, solicite o código fornecido no ato do agendamento. Verifique se o código está na lista: {codes}.
+                                - Se o código for inválido, informe o cliente. Se for válido, peça que o cliente digite 'excluir' (em português) ou 'remove' (em inglês) para confirmar o cancelamento.
+                                
+                                Responda apenas a dúvidas sobre serviços mecânicos e sobre nossa empresa. Considere que hoje é {today}.
+                                Não informe a lista de códigos ao cliente, são confidenciais.
+                                Não informe os horários já agendados ao cliente, a não ser que ele pergunte.
+                                Seja direto e objetivo."""
+
                             },
                             {"role": "user", "content": user_message}
                         ]
                         
-                        def collectingData():
+                        def generate_unique_code():
+                            while True:
+                                code = str(random.randint(100000, 999999))
+                                response = table_appointments.get_item(Key={'id': code})
+                                if 'Item' not in response:
+                                    return code
+                        
+                        def removeAppointment():
                             mensagens.append({
                                 "role": "system", 
-                                "content": f"Caso tenha sido enviada para confirmação a visita, me retorne os dados informados neste formato: {{'servico': a, 'nome': x, 'modelo': z, 'uso': a, 'localizacao': b, 'data': 'dia/mes/ano hora', 'code':'gere um código de 6 digitos aleatórios'}}. Onde 'modelo' é o modelo do carro, o 'uso' é se é domestico ou de frota e o 'servico' é o serviço a ser prestado(exemplo: 'troca de oleo'), mande apenas o dicionário limpo, sem mais informações. Se não conseguir coletar, retorne 'Unconfirmed'"
+                                "content": f"verifique o código informado neste histórico: {conversation_history}, e me informe o código informado pelo cliente. Apenas o código, sem mais nada"
+                            })
+                            codeToRemove = assistMessage(mensagens)
+                            print(codeToRemove)
+                            table_appointments.delete_item(Key={'id': codeToRemove})
+                            table_context.delete_item(Key={'id': sender})
+                            sendMessage('Seu agendamento foi excluido com sucesso!\n\nCaso precise de mais alguma coisa, estou aqui para ajudar.', sender)
+                        
+                        def collectingData():
+                            
+                            code = generate_unique_code()
+                            
+                            mensagens.append({
+                                "role": "system", 
+                                "content": f"Caso tenha sido enviada para confirmação a visita, me retorne os dados informados neste formato: {{'servico': a, 'nome': x, 'modelo': z, 'uso': a, 'localizacao': b, 'data': 'dia/mes/ano das (hora)h às (hora+1)h'}}. Onde 'modelo' é o modelo do carro, o 'uso' é se é doméstico ou de frota e o 'servico' é o serviço a ser prestado (exemplo: 'troca de óleo'), mande apenas o dicionário limpo, sem mais informações. Se não conseguir coletar, retorne 'unconfirmed'."
                             })
                         
                             data = assistMessage(mensagens)
@@ -112,18 +197,17 @@ def lambda_handler(event, context):
                             print(f'Dados: {data}')
                             
                             if data == 'unconfirmed':
+                                sendMessage(f'Ainda faltam dados a serem coletados.', sender)
                                 return
                             
                             try:
                                 dictionaryData = ast.literal_eval(data)
                             except (ValueError, SyntaxError):
-                                sendMessage(f'Seu código de agendamento é: {code}. \n\nA solicitação de agendamento foi enviada para aprovação e você receberá a confirmação em breve. \n\nSe precisar de mais alguma coisa, estarei à disposição!', sender)
                                 return
                             
-                            code = dictionaryData['code']
                             table_appointments.put_item(
                                 Item={
-                                    'id': code,  # Incluindo a chave primária como 'id'
+                                    'id': code,
                                     'servico': dictionaryData['servico'],
                                     'nome': dictionaryData['nome'],
                                     'telefone': sender,
@@ -134,10 +218,13 @@ def lambda_handler(event, context):
                                 }
                             )
                             sendMessage(f'Seu código de agendamento é: {code}. \n\nA solicitação de agendamento foi enviada para aprovação e você receberá a confirmação em breve. \n\nSe precisar de mais alguma coisa, estarei à disposição!', sender)
-
-                        if user_message.lower() == 'ok':
-                            collectingData()
                             table_context.delete_item(Key={'id': sender})
+
+                        if user_message.lower() == 'confirmar' or user_message.lower() == 'confirm':
+                            collectingData()
+                        
+                        elif user_message.lower() == 'excluir' or user_message.lower() == 'remove':
+                            removeAppointment()
                             
                         else:
                             resposta = assistMessage(mensagens)
@@ -154,8 +241,7 @@ def lambda_handler(event, context):
 
                         return {
                             'statusCode': 200,
-                        }
-                                              
+                        }               
                 else:
                     print("Nenhuma mensagem encontrada no corpo do evento.")
 
